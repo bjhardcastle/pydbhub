@@ -5,7 +5,7 @@ import configparser
 import base64
 import datetime
 from typing import List, Tuple, Dict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing_extensions import Literal
 
 # https://dateutil.readthedocs.io/
@@ -47,7 +47,7 @@ class Identifier:
 # UploadInformation holds information used when uploading
 @dataclass()
 class UploadInformation:
-    identifier: Identifier = Identifier()
+    identifier: Identifier = field(default_factory=Identifier)
     commitmsg: str = ''
     sourceurl: str = ''
     lastmodified: datetime.datetime = None
