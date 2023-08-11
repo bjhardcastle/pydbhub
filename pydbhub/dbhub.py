@@ -4,7 +4,7 @@ import io
 import configparser
 import base64
 import datetime
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from dataclasses import dataclass, field
 from typing_extensions import Literal
 
@@ -54,6 +54,7 @@ class UploadInformation:
     licence: str = ''
     public: bool = True
     force: bool = True
+    live: bool = False
     committimestamp: datetime.datetime = None
     authorname: str = ''
     authoremail: str = ''
@@ -67,7 +68,7 @@ class Dbhub:
     PRESERVE_PK_MERGE = 1
     NEX_PK_MERGE = 2
 
-    def __init__(self, api_key: str = None, config_data: str = None, config_file: str = None):
+    def __init__(self, api_key: Optional[str] = None, db_name: Optional[str] = None, db_user: Optional[str] = None, config_data: Optional[str] = None, config_file: Optional[str] = None):
         """
         Creates a new DBHub.io connection object.  It doesn't connect to DBHub.io.
         Connection only occurs when subsequent functions (eg Query()) are called.
@@ -81,7 +82,7 @@ class Dbhub:
         config_file : str
             INI configuration file
         """
-        if not api_key:
+        if config_data or config_file:
             config = configparser.ConfigParser()
             if config_data:
                 config.read_string(config_data)
@@ -92,28 +93,30 @@ class Dbhub:
                             config.read_file(f)
                     except IOError as e:
                         raise ValueError(f"Failed to read config file: {config_file} Erreor: {e}")
-                else:
-                    raise ValueError(f"INI configuration file: {config_file} doesn't exist")
-            else:
-                raise ValueError("No INI configuration specified")
-    
+                    else:
+                        raise ValueError(f"INI configuration file: {config_file} doesn't exist")
+        
             if config.has_section('dbhub') is False:
                 raise configparser.NoSectionError('dbhub')
             if config.has_option('dbhub', 'api_key') is False:
                 raise configparser.NoOptionError('api_key', 'dbhub')
-                
             api_key = config['dbhub'].get('api_key')
-            
+            db_name = config['dbhub'].get('db_name')
+            db_user = config['dbhub'].get('db_user')
+        elif not api_key:
+            raise ValueError("API key must be provdided directly or in config data or file")
+
         self._connection = Connection(api_key=api_key)
 
-    def __prepareVals(self, dbOwner: str = None, dbName: str = None, ident: Identifier = None):
+        self.db_name = db_name
+        self.db_user = db_user
+
+    def __prepareVals(self, dbOwner: Optional[str] = None, dbName: Optional[str] = None, ident: Optional[Identifier] = None):
         data = {}
         if len(self._connection.api_key) > 0:
             data['apikey'] = (None, self._connection.api_key)
-        if dbOwner is not None:
-            data['dbowner'] = (None, dbOwner)
-        if dbName is not None:
-            data['dbname'] = (None, dbName)
+        data['dbowner'] = (None, dbOwner or self.db_owner)
+        data['dbname'] = (None, dbName or self.db_name)
         if ident is not None:
             if ident.branch is not None:
                 data['branch'] = (None, ident.branch)
@@ -144,7 +147,7 @@ class Dbhub:
             data['live'] = "true"
         return httphub.send_request_json(self._connection.server + "/v1/databases", data)
 
-    def Columns(self, db_owner: str, db_name: str, table: str, ident: Identifier = None) -> Tuple[List[Dict], str]:
+    def Columns(self, table: str, ident: Optional[Identifier] = None, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
         """
         Returns the details of all columns in a table or view, as per the SQLite "table_info" PRAGMA.
         Ref: https://api.dbhub.io/#columns
@@ -201,7 +204,7 @@ class Dbhub:
 
         return ''
 
-    def Branches(self, db_owner: str, db_name: str) -> Tuple[Dict, str, str]:
+    def Branches(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[Dict, str, str]:
         """
         List of branches for a database
         Ref: https://api.dbhub.io/#branches
@@ -232,7 +235,7 @@ class Dbhub:
 
         return branches, res["default_branch"], None
 
-    def Commits(self, db_owner: str, db_name: str) -> Tuple[List[Dict], str]:
+    def Commits(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
         """
         Returns the details of all commits for a database
         Ref: https://api.dbhub.io/#commits
@@ -264,7 +267,7 @@ class Dbhub:
 
         return commits, None
 
-    def Diff(self, db_owner_a: str, db_name_a: str, ident_a: Identifier, db_owner_b: str, db_name_b: str, ident_b: Identifier, merge: Literal) -> Tuple[Dict, str]:
+    def Diff(self, ident_a: Identifier, ident_b: Identifier, merge: Literal['preserve_pk', 'new_pk', 'none'], db_owner_a: Optional[str] = None, db_name_a: Optional[str] = None, db_owner_b: Optional[str] = None, db_name_b: Optional[str] = None) -> Tuple[Dict, str]:
         """
         Generates a diff between two databases or two versions of a database
 
@@ -334,7 +337,7 @@ class Dbhub:
 
         return _DbhubDictToObject(res), None
 
-    def Download(self, db_owner: str, db_name: str) -> Tuple[List[bytes], str]:
+    def Download(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[bytes], str]:
         """
         Get the requested SQLite database file as a stream of bytes
         Ref: https://api.dbhub.io/#download
@@ -356,7 +359,7 @@ class Dbhub:
         data = self.__prepareVals(db_owner, db_name)
         return httphub.send_request(self._connection.server + "/v1/download", data)
 
-    def Execute(self, db_owner: str, db_name: str, sql: str) -> Tuple[int, str]:
+    def Execute(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[int, str]:
         """
         Execute a SQLite statement (INSERT, UPDATE, DELETE) on the chosen database, returning the rows changed.
         Ref: https://api.dbhub.io/#execute
@@ -385,7 +388,7 @@ class Dbhub:
 
         return res['rows_changed'], None
 
-    def Indexes(self, db_owner: str, db_name: str) -> Tuple[List[Dict], str]:
+    def Indexes(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
         """
         Returns the details of all indexes in a SQLite database
         Ref: https://api.dbhub.io/#indexes
@@ -413,7 +416,7 @@ class Dbhub:
 
         return indexes, None
 
-    def Metadata(self, db_owner: str, db_name: str) -> Tuple[List[Dict], str]:
+    def Metadata(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
         """
         Returns the commit, branch, release, tag and web page information for a database
         Ref: https://api.dbhub.io/#metadata
@@ -458,7 +461,7 @@ class Dbhub:
 
         return metadata, None
 
-    def Query(self, db_owner: str, db_name: str, sql: str) -> Tuple[List, str]:
+    def Query(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List, str]:
         """
         Run a SQLite query (SELECT only) on the chosen database, returning the results.
         Ref: https://api.dbhub.io/#query
@@ -505,7 +508,7 @@ class Dbhub:
 
         return rows, None
 
-    def Releases(self, db_owner: str, db_name: str) -> Tuple[List[Dict], str]:
+    def Releases(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
         """
         Returns the details of all releases for a database
         Ref: https://api.dbhub.io/#releases
@@ -537,7 +540,7 @@ class Dbhub:
 
         return releases, None
 
-    def Tables(self, db_owner: str, db_name: str) -> Tuple[List[str], str]:
+    def Tables(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[str], str]:
         """
         Returns the list of tables in a SQLite database
         Ref: https://api.dbhub.io/#tables
@@ -565,7 +568,7 @@ class Dbhub:
 
         return res, None
 
-    def Tags(self, db_owner: str, db_name: str) -> Tuple[List[Dict], str]:
+    def Tags(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
         """
         Returns the details of all tags for a database
         Ref: https://api.dbhub.io/#tags
@@ -621,7 +624,7 @@ class Dbhub:
         # Prepare the API parameters
         data = self.__prepareVals(dbName=db_name, ident=info.identifier)
 
-        if info:
+        if info and not info.live:
             if info.commitmsg:
                 data['commitmsg'] = info.commitmsg
             if info.sourceurl:
@@ -646,6 +649,11 @@ class Dbhub:
                 data['otherparents'] = info.otherparents
             if info.dbshasum:
                 data['dbshasum'] = info.dbshasum
+                
+        elif info and info.live:
+            data['live'] = 'live'
+            data['public'] = str(info.public)
+            data['force'] = str(info.force)
 
         res, err = httphub.send_upload(self._connection.server + "/v1/upload", data, db_bytes)
         if err:
@@ -653,7 +661,7 @@ class Dbhub:
 
         return res, None
 
-    def Views(self, db_owner: str, db_name: str, ident: Identifier = None) -> Tuple[List[Dict], str]:
+    def Views(self, db_owner: Optional[str] = None, db_name: Optional[str] = None, ident: Optional[Identifier] = None) -> Tuple[List[Dict], str]:
         """
         Returns the list of views in a SQLite database
         Ref: https://api.dbhub.io/#views
@@ -683,7 +691,7 @@ class Dbhub:
 
         return res, None
 
-    def Webpage(self, db_owner: str, db_name: str) -> Tuple[str, str]:
+    def Webpage(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[str, str]:
         """
         Returns the address of the database in the webUI. eg. for web browsers.
         Ref: https://api.dbhub.io/#webpage
