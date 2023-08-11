@@ -651,9 +651,9 @@ class Dbhub:
                 data['dbshasum'] = info.dbshasum
 
         elif info and info.live:
-            data['live'] = 'live'
-            data['public'] = str(info.public)
-            data['force'] = str(info.force)
+            data['live'] = 'true'
+            data['public'] = str(bool(info.public)).lower()
+            data['force'] = str(bool(info.force)).lower()
 
         res, err = httphub.send_upload(self._connection.server + "/v1/upload", data, db_bytes)
         if err:
