@@ -68,7 +68,7 @@ class Dbhub:
     PRESERVE_PK_MERGE = 1
     NEX_PK_MERGE = 2
 
-    def __init__(self, api_key: Optional[str] = None, db_name: Optional[str] = None, db_user: Optional[str] = None, config_data: Optional[str] = None, config_file: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, db_name: Optional[str] = None, db_owner: Optional[str] = None, config_data: Optional[str] = None, config_file: Optional[str] = None):
         """
         Creates a new DBHub.io connection object.  It doesn't connect to DBHub.io.
         Connection only occurs when subsequent functions (eg Query()) are called.
@@ -102,14 +102,14 @@ class Dbhub:
                 raise configparser.NoOptionError('api_key', 'dbhub')
             api_key = config['dbhub'].get('api_key')
             db_name = config['dbhub'].get('db_name')
-            db_user = config['dbhub'].get('db_user')
+            db_owner = config['dbhub'].get('db_owner')
         elif not api_key:
             raise ValueError("API key must be provdided directly or in config data or file")
 
         self._connection = Connection(api_key=api_key)
 
         self.db_name = db_name
-        self.db_user = db_user
+        self.db_owner = db_owner
 
     def __prepareVals(self, dbOwner: Optional[str] = None, dbName: Optional[str] = None, ident: Optional[Identifier] = None):
         data = {}
