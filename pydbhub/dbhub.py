@@ -93,8 +93,8 @@ class Dbhub:
                             config.read_file(f)
                     except IOError as e:
                         raise ValueError(f"Failed to read config file: {config_file} Erreor: {e}")
-                    else:
-                        raise ValueError(f"INI configuration file: {config_file} doesn't exist")
+                else:
+                    raise ValueError(f"INI configuration file: {config_file} doesn't exist")
         
             if config.has_section('dbhub') is False:
                 raise configparser.NoSectionError('dbhub')
@@ -649,7 +649,7 @@ class Dbhub:
                 data['otherparents'] = info.otherparents
             if info.dbshasum:
                 data['dbshasum'] = info.dbshasum
-                
+
         elif info and info.live:
             data['live'] = 'live'
             data['public'] = str(info.public)
