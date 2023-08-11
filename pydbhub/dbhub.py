@@ -67,46 +67,44 @@ class Dbhub:
     PRESERVE_PK_MERGE = 1
     NEX_PK_MERGE = 2
 
-    def __init__(self, config_data: str = None, config_file: str = None):
+    def __init__(self, api_key: str = None, config_data: str = None, config_file: str = None):
         """
         Creates a new DBHub.io connection object.  It doesn't connect to DBHub.io.
         Connection only occurs when subsequent functions (eg Query()) are called.
 
         Parameters
         ----------
-        key : str
+        api_key : str
             API key
         config_data : str
             INI configuration data from a string
         config_file : str
             INI configuration file
         """
-
-        config = configparser.ConfigParser()
-        if config_data:
-            config.read_string(config_data)
-        elif config_file:
-            if os.path.exists(config_file) > 0:
-                try:
-                    with open(config_file) as f:
-                        config.read_file(f)
-                except IOError as e:
-                    raise ValueError(f"Failed to read config file: {config_file} Erreor: {e}")
+        if not api_key:
+            config = configparser.ConfigParser()
+            if config_data:
+                config.read_string(config_data)
+            elif config_file:
+                if os.path.exists(config_file) > 0:
+                    try:
+                        with open(config_file) as f:
+                            config.read_file(f)
+                    except IOError as e:
+                        raise ValueError(f"Failed to read config file: {config_file} Erreor: {e}")
+                else:
+                    raise ValueError(f"INI configuration file: {config_file} doesn't exist")
             else:
-                raise ValueError(f"INI configuration file: {config_file} doesn't exist")
-        else:
-            raise ValueError("No INI configuration specified")
-
-        if config.has_section('dbhub') is False:
-            raise configparser.NoSectionError('dbhub')
-        if config.has_option('dbhub', 'api_key') is False:
-            raise configparser.NoOptionError('api_key', 'dbhub')
-        if config.has_option('dbhub', 'db_owner') is False:
-            raise configparser.NoOptionError('db_owner', 'dbhub')
-        if config.has_option('dbhub', 'db_name') is False:
-            raise configparser.NoOptionError('db_name', 'dbhub')
-
-        self._connection = Connection(api_key=config['dbhub'].get('api_key'))
+                raise ValueError("No INI configuration specified")
+    
+            if config.has_section('dbhub') is False:
+                raise configparser.NoSectionError('dbhub')
+            if config.has_option('dbhub', 'api_key') is False:
+                raise configparser.NoOptionError('api_key', 'dbhub')
+                
+            api_key = config['dbhub'].get('api_key')
+            
+        self._connection = Connection(api_key=api_key)
 
     def __prepareVals(self, dbOwner: str = None, dbName: str = None, ident: Identifier = None):
         data = {}
