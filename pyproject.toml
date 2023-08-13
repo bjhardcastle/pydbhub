@@ -4,6 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "pydbhub"
+requires-python = ">=3.7"
 authors = [{name = "LeMoussel", email = "cnhx27@gmail.com"}]
 readme = "README.md"
 license = {file = "LICENSE"}
