@@ -104,7 +104,7 @@ class Dbhub:
             db_name = config['dbhub'].get('db_name')
             db_owner = config['dbhub'].get('db_owner')
         elif not api_key:
-            raise ValueError("API key must be provdided directly or in config data or file")
+            raise ValueError("API key must be provided directly or in config data or file")
 
         self._connection = Connection(api_key=api_key)
 
@@ -359,7 +359,7 @@ class Dbhub:
         data = self.__prepareVals(db_owner, db_name)
         return httphub.send_request(self._connection.server + "/v1/download", data)
 
-    def Execute(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[int, str]:
+    def Execute(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[None | dict[str, str], None | dict[str, str]]:
         """
         Execute a SQLite statement (INSERT, UPDATE, DELETE) on the chosen database, returning the rows changed.
         Ref: https://api.dbhub.io/#execute
@@ -461,7 +461,7 @@ class Dbhub:
 
         return metadata, None
 
-    def Query(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List, str]:
+    def Query(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[None | dict[str, str], None | dict[str, str]]:
         """
         Run a SQLite query (SELECT only) on the chosen database, returning the results.
         Ref: https://api.dbhub.io/#query
