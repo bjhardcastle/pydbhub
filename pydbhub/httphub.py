@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pydbhub
 from typing import Any, Dict, List, Tuple
 from json.decoder import JSONDecodeError
@@ -5,7 +7,7 @@ import requests
 import io
 
 
-def send_request_json(query_url: str, data: Dict[str, Any]) -> Tuple[List[Any], str]:
+def send_request_json(query_url: str, data: Dict[str, Any])  -> tuple[Any, None] | tuple[None, Any] | tuple[Any, Any] | tuple[None, str]:
     """
     send_request_json sends a request to DBHub.io, formatting the returned result as JSON
 
@@ -43,7 +45,7 @@ def send_request_json(query_url: str, data: Dict[str, Any]) -> Tuple[List[Any], 
         return None, str(cause.args[0])
 
 
-def send_request(query_url: str, data: Dict[str, Any]) -> Tuple[List[bytes], str]:
+def send_request(query_url: str, data: Dict[str, Any]) -> tuple[bytes, None] | tuple[None, Any] | tuple[None, str]:
     """
     send_request sends a request to DBHub.io.
 
@@ -71,7 +73,7 @@ def send_request(query_url: str, data: Dict[str, Any]) -> Tuple[List[bytes], str
         return None, str(cause.args[0])
 
 
-def send_upload(query_url: str, data: Dict[str, Any], db_bytes: io.BufferedReader) -> Tuple[List[Any], str]:
+def send_upload(query_url: str, data: Dict[str, Any], db_bytes: io.BufferedReader) -> tuple[Any, str] | tuple[None, str] | tuple[Any, None] | tuple[Any, Any] | tuple[None, Any]:
     """
     send_upload uploads a database to DBHub.io.
 

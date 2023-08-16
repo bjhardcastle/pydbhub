@@ -5,7 +5,7 @@ import io
 import configparser
 import base64
 import datetime
-from typing import List, Tuple, Dict, Optional
+from typing import Any, List, Tuple, Dict, Optional
 from dataclasses import dataclass, field
 from typing_extensions import Literal
 
@@ -64,6 +64,8 @@ class UploadInformation:
     otherparents: str = ''
     dbshasum: str = ''
 
+Result = tuple[Any, None]
+Error = tuple[None, Any]
 
 class Dbhub:
     PRESERVE_PK_MERGE = 1
@@ -112,8 +114,8 @@ class Dbhub:
         self.db_name = db_name
         self.db_owner = db_owner
 
-    def __prepareVals(self, dbOwner: Optional[str] = None, dbName: Optional[str] = None, ident: Optional[Identifier] = None):
-        data = {}
+    def __prepareVals(self, dbOwner: Optional[str] = None, dbName: Optional[str] = None, ident: Optional[Identifier] = None) -> dict[str, Any]:
+        data: dict[str, Any] = {}
         if len(self._connection.api_key) > 0:
             data['apikey'] = (None, self._connection.api_key)
         data['dbowner'] = (None, dbOwner or self.db_owner)
@@ -129,7 +131,8 @@ class Dbhub:
                 data['tag'] = (None, ident.tag)
         return data
 
-    def Databases(self, live: bool = False) -> Tuple[List[str], str]:
+
+    def Databases(self, live: bool = False) -> Result | Error:
         """
         Returns the list of databases in the requesting users account.
         Ref: https://api.dbhub.io/#databases
@@ -148,7 +151,7 @@ class Dbhub:
             data['live'] = "true"
         return httphub.send_request_json(self._connection.server + "/v1/databases", data)
 
-    def Columns(self, table: str, ident: Optional[Identifier] = None, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
+    def Columns(self, table: str, ident: Optional[Identifier] = None, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the details of all columns in a table or view, as per the SQLite "table_info" PRAGMA.
         Ref: https://api.dbhub.io/#columns
@@ -183,7 +186,7 @@ class Dbhub:
 
         return res, None
 
-    def Delete(self, db_name: str) -> str:
+    def Delete(self, db_name: str) -> Any | Literal['']:
         """
         Delete a database from the requesting users account.
         Ref: https://api.dbhub.io/#delete
@@ -205,7 +208,7 @@ class Dbhub:
 
         return ''
 
-    def Branches(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[Dict, str, str]:
+    def Branches(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> tuple[dict, str, None] | tuple[None, None, str]:
         """
         List of branches for a database
         Ref: https://api.dbhub.io/#branches
@@ -236,7 +239,7 @@ class Dbhub:
 
         return branches, res["default_branch"], None
 
-    def Commits(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
+    def Commits(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the details of all commits for a database
         Ref: https://api.dbhub.io/#commits
@@ -268,7 +271,7 @@ class Dbhub:
 
         return commits, None
 
-    def Diff(self, ident_a: Identifier, ident_b: Identifier, merge: Literal['preserve_pk', 'new_pk', 'none'], db_owner_a: Optional[str] = None, db_name_a: Optional[str] = None, db_owner_b: Optional[str] = None, db_name_b: Optional[str] = None) -> Tuple[Dict, str]:
+    def Diff(self, ident_a: Identifier, ident_b: Identifier, merge: Literal['preserve_pk', 'new_pk', 'none'], db_owner_a: Optional[str] = None, db_name_a: Optional[str] = None, db_owner_b: Optional[str] = None, db_name_b: Optional[str] = None) -> Result | Error:
         """
         Generates a diff between two databases or two versions of a database
 
@@ -338,7 +341,7 @@ class Dbhub:
 
         return _DbhubDictToObject(res), None
 
-    def Download(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[bytes], str]:
+    def Download(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Get the requested SQLite database file as a stream of bytes
         Ref: https://api.dbhub.io/#download
@@ -360,7 +363,7 @@ class Dbhub:
         data = self.__prepareVals(db_owner, db_name)
         return httphub.send_request(self._connection.server + "/v1/download", data)
 
-    def Execute(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[None | dict[str, str], None | dict[str, str]]:
+    def Execute(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Execute a SQLite statement (INSERT, UPDATE, DELETE) on the chosen database, returning the rows changed.
         Ref: https://api.dbhub.io/#execute
@@ -389,7 +392,7 @@ class Dbhub:
 
         return res['rows_changed'], None
 
-    def Indexes(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
+    def Indexes(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the details of all indexes in a SQLite database
         Ref: https://api.dbhub.io/#indexes
@@ -417,7 +420,7 @@ class Dbhub:
 
         return indexes, None
 
-    def Metadata(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
+    def Metadata(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the commit, branch, release, tag and web page information for a database
         Ref: https://api.dbhub.io/#metadata
@@ -462,7 +465,7 @@ class Dbhub:
 
         return metadata, None
 
-    def Query(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[None | dict[str, str], None | dict[str, str]]:
+    def Query(self, sql: str, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Run a SQLite query (SELECT only) on the chosen database, returning the results.
         Ref: https://api.dbhub.io/#query
@@ -509,7 +512,7 @@ class Dbhub:
 
         return rows, None
 
-    def Releases(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
+    def Releases(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the details of all releases for a database
         Ref: https://api.dbhub.io/#releases
@@ -541,7 +544,7 @@ class Dbhub:
 
         return releases, None
 
-    def Tables(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[str], str]:
+    def Tables(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the list of tables in a SQLite database
         Ref: https://api.dbhub.io/#tables
@@ -569,7 +572,7 @@ class Dbhub:
 
         return res, None
 
-    def Tags(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[List[Dict], str]:
+    def Tags(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the details of all tags for a database
         Ref: https://api.dbhub.io/#tags
@@ -601,7 +604,7 @@ class Dbhub:
 
         return tags, None
 
-    def Upload(self, db_name: str, info: UploadInformation, db_bytes: io.BufferedReader) -> Tuple[Dict, str]:
+    def Upload(self, db_name: str, info: UploadInformation, db_bytes: io.BufferedReader) -> Result | Error:
         """
         Creates a new database in your account, or adds a new commit to an existing database
         Ref: https://api.dbhub.io/#upload
@@ -662,7 +665,7 @@ class Dbhub:
 
         return res, None
 
-    def Views(self, db_owner: Optional[str] = None, db_name: Optional[str] = None, ident: Optional[Identifier] = None) -> Tuple[List[Dict], str]:
+    def Views(self, db_owner: Optional[str] = None, db_name: Optional[str] = None, ident: Optional[Identifier] = None) -> Result | Error:
         """
         Returns the list of views in a SQLite database
         Ref: https://api.dbhub.io/#views
@@ -692,7 +695,7 @@ class Dbhub:
 
         return res, None
 
-    def Webpage(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Tuple[str, str]:
+    def Webpage(self, db_owner: Optional[str] = None, db_name: Optional[str] = None) -> Result | Error:
         """
         Returns the address of the database in the webUI. eg. for web browsers.
         Ref: https://api.dbhub.io/#webpage
@@ -717,5 +720,5 @@ class Dbhub:
         res, err = httphub.send_request_json(self._connection.server + "/v1/webpage", data)
         if err:
             return None, res
-
+        assert res
         return res['web_page'], None
